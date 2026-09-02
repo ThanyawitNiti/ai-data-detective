@@ -30,3 +30,28 @@ python scripts/build_sample_data.py
 pytest -q
 ruff check .
 ```
+
+## Safe query tools
+
+`get_schema()` describes the application-controlled `market_bars` table.
+`run_sql(query)` accepts one read-only `SELECT` or `WITH` statement and
+returns structured, JSON-friendly results:
+
+```python
+from ai_data_detective import get_schema, run_sql
+
+print(get_schema())
+print(
+    run_sql(
+        """
+        SELECT date, close
+        FROM market_bars
+        ORDER BY date
+        """
+    )
+)
+```
+
+The SQL caller cannot choose a dataset path, access external files, modify
+data, query unregistered tables, submit multiple statements, or return more
+than 100 rows.
