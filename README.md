@@ -71,3 +71,13 @@ print(result.to_dict())
 This milestone uses a fixed sequence: the model selects exactly one tool, the
 application runs it, and the model turns its evidence into a final answer. It
 is deliberately not an autonomous retrying agent loop yet.
+
+For manual testing, prefer the CLI so expected API errors are concise:
+
+```bash
+python scripts/ask.py "On which date did XAU/USD have the largest price drop?"
+```
+
+The OpenAI API is billed separately by usage and requires available API
+credits. If the account has no remaining credits, the CLI prints the billing
+link and exits cleanly instead of showing a long traceback.
