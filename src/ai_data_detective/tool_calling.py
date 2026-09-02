@@ -109,6 +109,46 @@ def _default_client() -> Any:
     return OpenAI()
 
 
+def _extract_api_error_code(error: Exception) -> str | None:
+    code = getattr(error, "code", None)
+    if isinstance(code, str):
+        return code
+
+    body = getattr(error, "body", None)
+    if not isinstance(body, dict):
+        return None
+    payload = body.get("error", body)
+    if not isinstance(payload, dict):
+        return None
+    body_code = payload.get("code")
+    return body_code if isinstance(body_code, str) else None
+
+
+def _create_response(api_client: Any, **kwargs: Any) -> Any:
+    try:
+        return api_client.responses.create(**kwargs)
+    except Exception as error:
+        code = _extract_api_error_code(error)
+        status_code = getattr(error, "status_code", None)
+
+        if code in {"credit_balance_exhausted", "insufficient_quota"}:
+            raise ToolCallingError(
+                "OpenAI API credits are exhausted. Add credits at "
+                "https://platform.openai.com/settings/organization/billing/ "
+                "and then run the command again."
+            ) from error
+        if status_code == 401:
+            raise ToolCallingError(
+                "OpenAI API authentication failed. Check OPENAI_API_KEY and create "
+                "a new key if necessary."
+            ) from error
+        if status_code == 429:
+            raise ToolCallingError(
+                "OpenAI API rate limit reached. Wait briefly and try again."
+            ) from error
+        raise
+
+
 def answer_question(
     question: str,
     *,
@@ -124,7 +164,8 @@ def answer_question(
         raise ToolCallingError("Set OPENAI_MODEL or pass model explicitly.")
 
     api_client = client or _default_client()
-    request_response = api_client.responses.create(
+    request_response = _create_response(
+        api_client,
         model=selected_model,
         instructions=SYSTEM_INSTRUCTIONS,
         input=question,
@@ -146,7 +187,8 @@ def answer_question(
     tool_result = dispatch_tool(function_call.name, arguments)
     tool_output = json.dumps(tool_result, ensure_ascii=False, default=str)
 
-    answer_response = api_client.responses.create(
+    answer_response = _create_response(
+        api_client,
         model=selected_model,
         instructions=SYSTEM_INSTRUCTIONS,
         previous_response_id=request_response.id,
