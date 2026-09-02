@@ -55,3 +55,19 @@ print(
 The SQL caller cannot choose a dataset path, access external files, modify
 data, query unregistered tables, submit multiple statements, or return more
 than 100 rows.
+
+## Single-turn model tool calling
+
+Set `OPENAI_API_KEY` and `OPENAI_MODEL` in your environment, then call:
+
+```python
+from ai_data_detective import answer_question
+
+result = answer_question("On which date was the lowest close?")
+print(result.answer)
+print(result.to_dict())
+```
+
+This milestone uses a fixed sequence: the model selects exactly one tool, the
+application runs it, and the model turns its evidence into a final answer. It
+is deliberately not an autonomous retrying agent loop yet.
